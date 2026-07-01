@@ -2,7 +2,6 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 
 interface HeaderProps {
@@ -13,27 +12,10 @@ export function Header({ subtitle }: HeaderProps) {
   const router = useRouter();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
-
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
-  const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
-    : user?.email
-    ? user.email[0].toUpperCase()
-    : "U";
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: colors.primary, paddingTop: topPadding },
-      ]}
-    >
+    <View style={[styles.container, { backgroundColor: colors.primary, paddingTop: topPadding }]}>
       <View style={styles.row}>
         <TouchableOpacity
           style={styles.iconButton}
@@ -51,42 +33,16 @@ export function Header({ subtitle }: HeaderProps) {
           <Feather name="search" size={15} color="rgba(255,255,255,0.75)" />
           <Text style={styles.searchPlaceholder}>Search members...</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.avatar, { backgroundColor: colors.accent }]}
-          onPress={() => router.push("/profile")}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.avatarText, { color: colors.primary }]}>
-            {initials}
-          </Text>
-        </TouchableOpacity>
       </View>
-      {subtitle ? (
-        <Text style={styles.subtitle}>{subtitle}</Text>
-      ) : null}
+      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    width: "100%",
-    paddingBottom: 10,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 10,
-  },
-  iconButton: {
-    width: 38,
-    height: 38,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  container: { width: "100%", paddingBottom: 10 },
+  row: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 10, gap: 10 },
+  iconButton: { width: 38, height: 38, justifyContent: "center", alignItems: "center" },
   searchBar: {
     flex: 1,
     flexDirection: "row",
@@ -97,27 +53,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.18)",
     gap: 8,
   },
-  searchPlaceholder: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.75)",
-  },
-  avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarText: {
-    fontSize: 14,
-    fontFamily: "Inter_700Bold",
-  },
-  subtitle: {
-    color: "rgba(255,255,255,0.65)",
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    paddingHorizontal: 16,
-    paddingBottom: 6,
-  },
+  searchPlaceholder: { fontSize: 14, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.75)" },
+  subtitle: { color: "rgba(255,255,255,0.65)", fontSize: 12, fontFamily: "Inter_400Regular", paddingHorizontal: 16, paddingBottom: 6 },
 });

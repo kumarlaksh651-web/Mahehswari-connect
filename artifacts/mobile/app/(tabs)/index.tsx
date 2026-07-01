@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import {
   FlatList,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,7 +13,6 @@ import { CallSheet } from "@/components/CallSheet";
 import { Header } from "@/components/Header";
 import { MemberCard } from "@/components/MemberCard";
 import { Member, useMembers } from "@/context/MembersContext";
-import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 
 export default function HomeScreen() {
@@ -23,116 +20,97 @@ export default function HomeScreen() {
   const [callMember, setCallMember] = useState<Member | null>(null);
   const [callVisible, setCallVisible] = useState(false);
   const { members, getAkkas } = useMembers();
-  const { user } = useAuth();
   const colors = useColors();
-  const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
 
   const akkas = getAkkas();
-  const filtered = selectedAkka
-    ? members.filter((m) => m.akka === selectedAkka)
-    : members;
+  const filtered = selectedAkka ? members.filter((m) => m.akka === selectedAkka) : [];
 
   function handleCall(member: Member) {
     setCallMember(member);
     setCallVisible(true);
   }
 
+  // When no akka selected, show akka cards with member counts
+  const AkkaCards = () => (
+    <View style={styles.akkaCardsWrap}>
+      <Text style={[styles.browsTitle, { color: colors.foreground }]}>
+        Browse by Surname
+      </Text>
+      <Text style={[styles.browsSub, { color: colors.mutedForeground }]}>
+        Select a community surname to connect with members
+      </Text>
+      <View style={styles.akkaGrid}>
+        {akkas.map((a) => {
+          const count = members.filter((m) => m.akka === a).length;
+          return (
+            <TouchableOpacity
+              key={a}
+              style={[styles.akkaCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => setSelectedAkka(a)}
+              activeOpacity={0.82}
+            >
+              <View style={[styles.akkaIconWrap, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.akkaInitial, { color: colors.primaryForeground }]}>
+                  {a[0]}
+                </Text>
+              </View>
+              <Text style={[styles.akkaName, { color: colors.foreground }]} numberOfLines={1}>
+                {a}
+              </Text>
+              <View style={[styles.akkaBadge, { backgroundColor: colors.muted }]}>
+                <Text style={[styles.akkaBadgeText, { color: colors.accent }]}>
+                  {count}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+
   const ListHeader = (
     <>
-      {/* Profile incomplete banner */}
-      {user && !user.name && (
+      {/* Surname filter chips */}
+      <View style={styles.filterBar}>
         <TouchableOpacity
-          style={[styles.incompleteBanner, { backgroundColor: colors.accent }]}
-          onPress={() => router.push("/profile")}
-          activeOpacity={0.88}
-        >
-          <View style={styles.incompleteBannerInner}>
-            <Feather name="user" size={16} color={colors.primary} />
-            <Text style={[styles.incompleteBannerText, { color: colors.primary }]}>
-              Complete your profile to connect with the community
-            </Text>
-          </View>
-          <Feather name="arrow-right" size={16} color={colors.primary} />
-        </TouchableOpacity>
-      )}
-
-      {/* Greeting */}
-      <View style={styles.greetingBlock}>
-        <Text style={[styles.greetingTitle, { color: colors.foreground }]}>
-          {user?.name ? `Jai Jai Maheshwari, ${user.name.split(" ")[0]}` : "Jai Jai Maheshwari"}
-        </Text>
-        <Text style={[styles.greetingSubtitle, { color: colors.mutedForeground }]}>
-          Connect with the Dhat Maheshwari community
-        </Text>
-      </View>
-
-      {/* Akka filter chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipsRow}
-      >
-        <TouchableOpacity
-          style={[
-            styles.chip,
-            { backgroundColor: !selectedAkka ? colors.primary : colors.secondary },
-          ]}
+          style={[styles.clearChip, { backgroundColor: colors.muted }]}
           onPress={() => setSelectedAkka(null)}
         >
-          <Text
-            style={[
-              styles.chipText,
-              {
-                color: !selectedAkka
-                  ? colors.primaryForeground
-                  : colors.foreground,
-              },
-            ]}
-          >
-            All
-          </Text>
+          <Feather name="grid" size={14} color={colors.mutedForeground} />
+          <Text style={[styles.clearChipText, { color: colors.mutedForeground }]}>All Surnames</Text>
         </TouchableOpacity>
-        {akkas.map((akka) => (
-          <TouchableOpacity
-            key={akka}
-            style={[
-              styles.chip,
-              {
-                backgroundColor:
-                  selectedAkka === akka ? colors.primary : colors.secondary,
-              },
-            ]}
-            onPress={() =>
-              setSelectedAkka(akka === selectedAkka ? null : akka)
-            }
-          >
-            <Text
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+          {akkas.map((akka) => (
+            <TouchableOpacity
+              key={akka}
               style={[
-                styles.chipText,
-                {
-                  color:
-                    selectedAkka === akka
-                      ? colors.primaryForeground
-                      : colors.foreground,
-                },
+                styles.chip,
+                { backgroundColor: selectedAkka === akka ? colors.primary : colors.secondary, borderColor: selectedAkka === akka ? colors.primary : colors.border },
               ]}
+              onPress={() => setSelectedAkka(akka === selectedAkka ? null : akka)}
             >
-              {akka}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Section title */}
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-          Community Members
-        </Text>
-        <Text style={[styles.sectionCount, { color: colors.mutedForeground }]}>
-          {filtered.length} members
-        </Text>
+              <Text style={[styles.chipText, { color: selectedAkka === akka ? colors.primaryForeground : colors.foreground }]}>
+                {akka}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
+
+      {selectedAkka && (
+        <View style={styles.sectionHeader}>
+          <View style={[styles.sectionAkkaTag, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.sectionAkkaText, { color: colors.primaryForeground }]}>
+              {selectedAkka} Family
+            </Text>
+          </View>
+          <Text style={[styles.sectionCount, { color: colors.mutedForeground }]}>
+            {filtered.length} member{filtered.length !== 1 ? "s" : ""}
+          </Text>
+        </View>
+      )}
     </>
   );
 
@@ -140,117 +118,108 @@ export default function HomeScreen() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <Header subtitle="Pakistan & Worldwide" />
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <MemberCard member={item} onCall={handleCall} />
-        )}
-        ListHeaderComponent={ListHeader}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Feather name="users" size={40} color={colors.mutedForeground} />
-            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-              No members found
-            </Text>
-            <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>
-              Try selecting a different akka filter
-            </Text>
-          </View>
-        }
-        contentContainerStyle={{ paddingBottom: tabBarHeight + 16 }}
-        showsVerticalScrollIndicator={false}
-      />
+      {!selectedAkka ? (
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: tabBarHeight + 16 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {ListHeader}
+          <AkkaCards />
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <MemberCard member={item} onCall={handleCall} />}
+          ListHeaderComponent={ListHeader}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Feather name="users" size={40} color={colors.mutedForeground} />
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No members found</Text>
+              <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>
+                No members found in this akka group yet
+              </Text>
+            </View>
+          }
+          contentContainerStyle={{ paddingBottom: tabBarHeight + 16 }}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
-      <CallSheet
-        member={callMember}
-        visible={callVisible}
-        onClose={() => setCallVisible(false)}
-      />
+      <CallSheet member={callMember} visible={callVisible} onClose={() => setCallVisible(false)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  incompleteBanner: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 14,
+  filterBar: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4, gap: 10 },
+  clearChip: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    alignSelf: "flex-start",
   },
-  incompleteBannerInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flex: 1,
-  },
-  incompleteBannerText: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    flex: 1,
-  },
-  greetingBlock: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-  greetingTitle: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-  },
-  greetingSubtitle: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    marginTop: 3,
-  },
-  chipsRow: {
-    paddingHorizontal: 16,
-    paddingBottom: 4,
-    gap: 8,
-    alignItems: "center",
-  },
+  clearChipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  chipsRow: { gap: 8, alignItems: "center", paddingVertical: 2 },
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
+    borderWidth: 1,
   },
-  chipText: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-  },
+  chipText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   sectionHeader: {
     paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 6,
+    paddingTop: 16,
+    paddingBottom: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
+  sectionAkkaTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
-  sectionCount: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-  },
-  empty: {
+  sectionAkkaText: { fontSize: 14, fontFamily: "Inter_700Bold" },
+  sectionCount: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  akkaCardsWrap: { paddingHorizontal: 16, paddingTop: 20 },
+  browsTitle: { fontSize: 22, fontFamily: "Inter_700Bold", marginBottom: 4 },
+  browsSub: { fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 18 },
+  akkaGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  akkaCard: {
+    width: "47%",
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
     alignItems: "center",
-    paddingTop: 60,
-    gap: 12,
+    gap: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
+  akkaIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  emptyDesc: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
+  akkaInitial: { fontSize: 22, fontFamily: "Inter_700Bold" },
+  akkaName: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  akkaBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
+  akkaBadgeText: { fontSize: 13, fontFamily: "Inter_700Bold" },
+  empty: { alignItems: "center", paddingTop: 60, gap: 12 },
+  emptyTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold" },
+  emptyDesc: { fontSize: 14, fontFamily: "Inter_400Regular" },
 });

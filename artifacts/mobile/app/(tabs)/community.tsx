@@ -1,43 +1,83 @@
+import { useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Header } from "@/components/Header";
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/context/AuthContext";
 
-const SERVICES = [
+const ORGS = [
   {
     id: "pgmf",
-    icon: "globe" as const,
-    title: "Pak Global Maheshwaris Forum",
-    desc: "A premier community network running free medical camps, student scholarships, and interfaith civic initiatives across Pakistan and diaspora worldwide.",
+    name: "Pak Global Maheshwaris Forum",
+    short: "PGMF",
+    desc: "The premier digital community platform connecting Maheshwari families across Pakistan and the global diaspora. Runs free medical camps in Tharparkar and Umerkot, funds student scholarships, and drives interfaith civic initiatives.",
+    services: [
+      "Free medical camps in Tharparkar & Umerkot",
+      "Annual student scholarship awards",
+      "Community emergency relief coordination",
+      "Diaspora networking & reunion events",
+    ],
     fb: "https://www.facebook.com/groups/PakGlobalMaheshwaris",
-    label: "Facebook Group",
+    fbLabel: "Join Facebook Group",
+    color: "#1877F2",
   },
   {
     id: "maf",
-    icon: "shield" as const,
-    title: "Maheshwari Action Forum",
-    desc: "Advocacy platform for Dhat Maheshwari rights, cultural preservation, interfaith dialogue, and legal assistance for community members.",
+    name: "Maheshwari Action Forum",
+    short: "MAF",
+    desc: "An advocacy and action platform championing the rights, cultural preservation, and civic participation of the Dhat Maheshwari community in Pakistan and abroad. Focuses on legal assistance, interfaith dialogue, and community representation.",
+    services: [
+      "Legal aid and rights advocacy",
+      "Interfaith dialogue programs",
+      "Cultural heritage documentation",
+      "Community representation in civic matters",
+    ],
     fb: "https://www.facebook.com/MaheshwariActionForum",
-    label: "Facebook Page",
+    fbLabel: "Follow on Facebook",
+    color: "#1877F2",
+  },
+];
+
+const ACHIEVEMENTS = [
+  {
+    id: "a1",
+    title: "Tharparkar Free Medical Camp 2024",
+    body: "Pak Global Maheshwaris Forum organized a 3-day free medical camp in Mithi, Tharparkar, serving over 1,200 patients from Maheshwari and neighboring communities. Specialist doctors from Karachi volunteered their services.",
+    date: "Dec 2024",
+    icon: "heart",
   },
   {
-    id: "mb",
-    icon: "users" as const,
-    title: "Marriage Bureau",
-    desc: "Connecting Dhat Maheshwari families for matrimonial alliances within the community, preserving cultural and traditional values.",
-    fb: null,
-    label: null,
+    id: "a2",
+    title: "Scholarship Awards Ceremony 2024",
+    body: "12 deserving Maheshwari students from Sindh received annual scholarships for medicine and engineering studies. The ceremony was held in Karachi with participation from community elders and PGMF members worldwide.",
+    date: "Aug 2024",
+    icon: "book",
   },
   {
-    id: "bd",
-    icon: "briefcase" as const,
-    title: "Business Directory",
-    desc: "Discover textile, gold, commodity, and healthcare businesses run by Dhat Maheshwari members across Pakistan and abroad.",
-    fb: null,
-    label: null,
+    id: "a3",
+    title: "Mahesh Navami Celebrations",
+    body: "The community celebrated Mahesh Navami, the most sacred Maheshwari festival, with traditional rituals, Vedic prayers, and community gatherings in Karachi, Hyderabad, and Mithi. Online participation from diaspora worldwide.",
+    date: "Jun 2024",
+    icon: "star",
+  },
+  {
+    id: "a4",
+    title: "MAF Interfaith Harmony Initiative",
+    body: "Maheshwari Action Forum partnered with civil society organizations for a series of interfaith harmony events across Sindh, highlighting the peaceful coexistence of the Maheshwari Hindu community in Pakistan.",
+    date: "Apr 2024",
+    icon: "globe",
   },
 ];
 
@@ -58,9 +98,53 @@ const SOCIALS = [
   },
 ];
 
+interface Thought {
+  id: string;
+  author: string;
+  text: string;
+  time: string;
+}
+
+const SAMPLE_THOUGHTS: Thought[] = [
+  {
+    id: "t1",
+    author: "Ramesh Bhansali",
+    text: "Proud to be part of this beautiful Dhatki Maheshwari community. Our culture and traditions are a treasure that we must preserve for generations to come. Jai Mahesh!",
+    time: "2 days ago",
+  },
+  {
+    id: "t2",
+    author: "Vijay Chandak",
+    text: "The PGMF medical camp in Tharparkar was truly inspiring. Our community coming together to serve others reflects the best of Maheshwari values.",
+    time: "1 week ago",
+  },
+];
+
 export default function CommunityScreen() {
   const colors = useColors();
+  const { user } = useAuth();
   const tabBarHeight = useBottomTabBarHeight();
+  const [thoughts, setThoughts] = useState<Thought[]>(SAMPLE_THOUGHTS);
+  const [thoughtInput, setThoughtInput] = useState("");
+
+  function submitThought() {
+    const text = thoughtInput.trim();
+    if (!text) return;
+    if (!user?.name) {
+      Alert.alert("Profile Required", "Please complete your profile before sharing a thought.");
+      return;
+    }
+    setThoughts([
+      {
+        id: Date.now().toString(),
+        author: user.name,
+        text,
+        time: "Just now",
+      },
+      ...thoughts,
+    ]);
+    setThoughtInput("");
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -76,93 +160,121 @@ export default function CommunityScreen() {
             style={styles.bannerImg}
             contentFit="cover"
           />
-          <LinearGradient
-            colors={["transparent", "rgba(100,10,10,0.9)"]}
-            style={StyleSheet.absoluteFill}
-          />
+          <LinearGradient colors={["transparent", "rgba(100,10,10,0.92)"]} style={StyleSheet.absoluteFill} />
           <View style={styles.bannerContent}>
             <Text style={styles.bannerTitle}>Dhat Maheshwari</Text>
-            <Text style={styles.bannerSub}>
-              Tharparkar · Umerkot · Karachi · Hyderabad · Worldwide
-            </Text>
+            <Text style={styles.bannerSub}>Tharparkar · Umerkot · Karachi · Hyderabad · Worldwide</Text>
           </View>
         </View>
 
         {/* About */}
-        <View style={styles.groupHeader}>
-          <Text style={[styles.groupTitle, { color: colors.foreground }]}>
-            About Our Community
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.aboutCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
+        <SectionTitle title="About Our Community" colors={colors} />
+        <View style={[styles.aboutCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.aboutText, { color: colors.mutedForeground }]}>
             The Dhatki Maheshwari community of Pakistan is an elite, highly traditional Hindu merchant class
             primarily native to the Tharparkar and Umerkot districts of Sindh, with strong urban centers in
-            Karachi and Hyderabad. Distinct from any regional tribal or artisan sub-groups, they represent
-            the ancestral, aristocratic Vaishya (Baniya) lineage, defining their identity through strict
-            cultural purity, traditional business ventures, and their mother tongue, Dhatki — a unique
-            Rajasthani-Marwari dialect of the Thar desert.{"\n\n"}
-            The community is highly urbanized, holding prominent roles in wholesale textile trading, gold
-            markets, commodity imports, and modern healthcare and corporate sectors across Sindh. They are
-            distinguished by their steadfast preservation of heritage, practicing absolute vegetarianism and
-            strictly adhering to ancient Vedic and Shaivite traditions, with Mahesh Navami serving as their
-            most significant community festival.{"\n\n"}
-            Highly educated and cohesive, the community leverages powerful digital and professional networks
-            like the Pak Global Maheshwaris Forum to run philanthropic medical societies, fund student
-            scholarships, and drive impactful interfaith civic initiatives. Through these efforts, they
-            maintain an influential socio-economic footprint while firmly safeguarding their distinct
+            Karachi and Hyderabad. Distinct from any regional tribal or artisan sub-groups, they represent the
+            ancestral, aristocratic Vaishya (Baniya) lineage, defining their identity through strict cultural
+            purity, traditional business ventures, and their mother tongue, Dhatki — a unique Rajasthani-Marwari
+            dialect of the Thar desert.{"\n\n"}
+            The community is highly urbanized, holding prominent roles in wholesale textile trading, gold markets,
+            commodity imports, and modern healthcare and corporate sectors across Sindh. Highly educated and
+            cohesive, they leverage powerful networks like the Pak Global Maheshwaris Forum to run philanthropic
+            medical societies, fund student scholarships, and drive impactful interfaith civic initiatives.
+            They maintain an influential socio-economic footprint while firmly safeguarding their distinct
             Dhatki-Maheshwari ancestral legacy.
           </Text>
         </View>
 
-        {/* Community Services */}
-        <View style={styles.groupHeader}>
-          <Text style={[styles.groupTitle, { color: colors.foreground }]}>
-            Community Organizations & Services
-          </Text>
-        </View>
-        {SERVICES.map((s) => (
-          <View
-            key={s.id}
-            style={[styles.serviceCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-          >
-            <View style={styles.serviceTop}>
-              <View style={[styles.serviceIcon, { backgroundColor: colors.muted }]}>
-                <Feather name={s.icon} size={22} color={colors.primary} />
+        {/* Community Organizations */}
+        <SectionTitle title="Community Organizations" colors={colors} />
+        {ORGS.map((org) => (
+          <View key={org.id} style={[styles.orgCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.orgHeader}>
+              <View style={[styles.orgBadge, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.orgShort, { color: colors.primaryForeground }]}>{org.short}</Text>
               </View>
-              <View style={styles.serviceText}>
-                <Text style={[styles.serviceTitle, { color: colors.foreground }]}>
-                  {s.title}
-                </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.orgName, { color: colors.foreground }]}>{org.name}</Text>
               </View>
             </View>
-            <Text style={[styles.serviceDesc, { color: colors.mutedForeground }]}>
-              {s.desc}
-            </Text>
-            {s.fb && (
-              <TouchableOpacity
-                style={[styles.fbBtn, { backgroundColor: "#1877F2" }]}
-                onPress={() => Linking.openURL(s.fb!)}
-                activeOpacity={0.85}
-              >
-                <Feather name="facebook" size={15} color="#fff" />
-                <Text style={styles.fbBtnText}>{s.label}</Text>
-              </TouchableOpacity>
-            )}
+            <Text style={[styles.orgDesc, { color: colors.mutedForeground }]}>{org.desc}</Text>
+            <View style={[styles.servicesList, { borderColor: colors.border }]}>
+              {org.services.map((s, i) => (
+                <View key={i} style={styles.serviceItem}>
+                  <View style={[styles.serviceDot, { backgroundColor: colors.accent }]} />
+                  <Text style={[styles.serviceText, { color: colors.foreground }]}>{s}</Text>
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={[styles.fbBtn, { backgroundColor: org.color }]}
+              onPress={() => Linking.openURL(org.fb)}
+              activeOpacity={0.85}
+            >
+              <Feather name="facebook" size={15} color="#fff" />
+              <Text style={styles.fbBtnText}>{org.fbLabel}</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+
+        {/* Community Achievements */}
+        <SectionTitle title="Community Achievements" colors={colors} />
+        {ACHIEVEMENTS.map((item) => (
+          <View key={item.id} style={[styles.achieveCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.achieveTop}>
+              <View style={[styles.achieveIcon, { backgroundColor: colors.muted }]}>
+                <Feather name={item.icon as any} size={20} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.achieveTitle, { color: colors.foreground }]}>{item.title}</Text>
+                <Text style={[styles.achieveDate, { color: colors.accent }]}>{item.date}</Text>
+              </View>
+            </View>
+            <Text style={[styles.achieveBody, { color: colors.mutedForeground }]}>{item.body}</Text>
+          </View>
+        ))}
+
+        {/* Share Thoughts */}
+        <SectionTitle title="Share Your Thoughts" colors={colors} />
+        <View style={[styles.thoughtInputCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TextInput
+            style={[styles.thoughtInput, { color: colors.foreground, borderColor: colors.border }]}
+            placeholder="Share something with the community..."
+            placeholderTextColor={colors.mutedForeground}
+            value={thoughtInput}
+            onChangeText={setThoughtInput}
+            multiline
+            numberOfLines={3}
+          />
+          <TouchableOpacity
+            style={[styles.thoughtSubmit, { backgroundColor: colors.primary }]}
+            onPress={submitThought}
+            activeOpacity={0.85}
+          >
+            <Feather name="send" size={16} color={colors.primaryForeground} />
+            <Text style={[styles.thoughtSubmitText, { color: colors.primaryForeground }]}>Share</Text>
+          </TouchableOpacity>
+        </View>
+        {thoughts.map((t) => (
+          <View key={t.id} style={[styles.thoughtCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.thoughtMeta}>
+              <View style={[styles.thoughtAvatar, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.thoughtAvatarText, { color: colors.primaryForeground }]}>
+                  {t.author[0]}
+                </Text>
+              </View>
+              <View>
+                <Text style={[styles.thoughtAuthor, { color: colors.foreground }]}>{t.author}</Text>
+                <Text style={[styles.thoughtTime, { color: colors.mutedForeground }]}>{t.time}</Text>
+              </View>
+            </View>
+            <Text style={[styles.thoughtText, { color: colors.foreground }]}>{t.text}</Text>
           </View>
         ))}
 
         {/* Connect With Us */}
-        <View style={styles.groupHeader}>
-          <Text style={[styles.groupTitle, { color: colors.foreground }]}>
-            Connect With Us
-          </Text>
-        </View>
+        <SectionTitle title="Connect With Us" colors={colors} />
         <View style={styles.socialsGrid}>
           {SOCIALS.map((s) => (
             <TouchableOpacity
@@ -184,119 +296,57 @@ export default function CommunityScreen() {
   );
 }
 
+function SectionTitle({ title, colors }: { title: string; colors: any }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{title}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   bannerWrap: { height: 190, position: "relative" },
   bannerImg: { width: "100%", height: "100%" },
-  bannerContent: {
-    position: "absolute",
-    bottom: 16,
-    left: 16,
-    right: 16,
-  },
-  bannerTitle: {
-    fontSize: 26,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-  },
-  bannerSub: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.82)",
-    fontFamily: "Inter_400Regular",
-    marginTop: 2,
-  },
-  groupHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 22,
-    paddingBottom: 10,
-  },
-  groupTitle: {
-    fontSize: 19,
-    fontFamily: "Inter_700Bold",
-  },
-  aboutCard: {
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  aboutText: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 23,
-  },
-  serviceCard: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 10,
-  },
-  serviceTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  serviceIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  serviceText: { flex: 1 },
-  serviceTitle: {
-    fontSize: 15,
-    fontFamily: "Inter_700Bold",
-  },
-  serviceDesc: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 20,
-  },
-  fbBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 10,
-    alignSelf: "flex-start",
-  },
-  fbBtnText: {
-    color: "#fff",
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-  },
-  socialsGrid: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    gap: 12,
-    paddingBottom: 4,
-  },
-  socialCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: "center",
-    gap: 8,
-  },
-  socialIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  socialName: {
-    fontSize: 14,
-    fontFamily: "Inter_700Bold",
-  },
-  socialHandle: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    textAlign: "center",
-  },
+  bannerContent: { position: "absolute", bottom: 16, left: 16, right: 16 },
+  bannerTitle: { fontSize: 26, fontFamily: "Inter_700Bold", color: "#fff" },
+  bannerSub: { fontSize: 12, color: "rgba(255,255,255,0.82)", fontFamily: "Inter_400Regular", marginTop: 2 },
+  sectionHeader: { paddingHorizontal: 16, paddingTop: 22, paddingBottom: 10 },
+  sectionTitle: { fontSize: 19, fontFamily: "Inter_700Bold" },
+  aboutCard: { marginHorizontal: 16, padding: 16, borderRadius: 16, borderWidth: 1 },
+  aboutText: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 23 },
+  orgCard: { marginHorizontal: 16, marginBottom: 14, padding: 16, borderRadius: 16, borderWidth: 1, gap: 12 },
+  orgHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  orgBadge: { width: 46, height: 46, borderRadius: 14, justifyContent: "center", alignItems: "center" },
+  orgShort: { fontSize: 12, fontFamily: "Inter_700Bold" },
+  orgName: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  orgDesc: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 20 },
+  servicesList: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 8 },
+  serviceItem: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  serviceDot: { width: 6, height: 6, borderRadius: 3, marginTop: 6 },
+  serviceText: { fontSize: 13, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 20 },
+  fbBtn: { flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, alignSelf: "flex-start" },
+  fbBtnText: { color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  achieveCard: { marginHorizontal: 16, marginBottom: 12, padding: 16, borderRadius: 16, borderWidth: 1, gap: 10 },
+  achieveTop: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  achieveIcon: { width: 46, height: 46, borderRadius: 14, justifyContent: "center", alignItems: "center" },
+  achieveTitle: { fontSize: 15, fontFamily: "Inter_700Bold", flex: 1 },
+  achieveDate: { fontSize: 12, fontFamily: "Inter_600SemiBold", marginTop: 2 },
+  achieveBody: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 20 },
+  thoughtInputCard: { marginHorizontal: 16, marginBottom: 12, padding: 14, borderRadius: 16, borderWidth: 1, gap: 10 },
+  thoughtInput: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 14, fontFamily: "Inter_400Regular", minHeight: 72, textAlignVertical: "top" },
+  thoughtSubmit: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, alignSelf: "flex-end" },
+  thoughtSubmitText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  thoughtCard: { marginHorizontal: 16, marginBottom: 10, padding: 14, borderRadius: 16, borderWidth: 1, gap: 10 },
+  thoughtMeta: { flexDirection: "row", alignItems: "center", gap: 10 },
+  thoughtAvatar: { width: 36, height: 36, borderRadius: 18, justifyContent: "center", alignItems: "center" },
+  thoughtAvatarText: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  thoughtAuthor: { fontSize: 14, fontFamily: "Inter_700Bold" },
+  thoughtTime: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  thoughtText: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 21 },
+  socialsGrid: { flexDirection: "row", paddingHorizontal: 16, gap: 12, paddingBottom: 4 },
+  socialCard: { flex: 1, padding: 16, borderRadius: 16, borderWidth: 1, alignItems: "center", gap: 8 },
+  socialIconWrap: { width: 52, height: 52, borderRadius: 26, justifyContent: "center", alignItems: "center" },
+  socialName: { fontSize: 14, fontFamily: "Inter_700Bold" },
+  socialHandle: { fontSize: 11, fontFamily: "Inter_500Medium", textAlign: "center" },
 });

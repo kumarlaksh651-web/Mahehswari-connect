@@ -14,6 +14,9 @@ export interface UserProfile {
   email: string;
   photo?: string;
   verified: boolean;
+  whatsapp?: string;
+  instagram?: string;
+  facebook?: string;
 }
 
 interface StoredUser {
@@ -27,6 +30,17 @@ interface AuthStore {
   currentUserId: string | null;
 }
 
+interface RegisterData {
+  name: string;
+  fatherName: string;
+  akka: string;
+  country: string;
+  city: string;
+  qualification: string;
+  phone: string;
+  countryCode: string;
+}
+
 interface AuthContextType {
   user: UserProfile | null;
   isLoading: boolean;
@@ -35,17 +49,15 @@ interface AuthContextType {
   register: (
     email: string,
     password: string,
-    phone: string,
-    countryCode: string
+    data: RegisterData
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
-  verifyCode: (code: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const STORAGE_KEY = "@dhat_maheshwari_auth_v1";
+const STORAGE_KEY = "@dhat_maheshwari_auth_v2";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -61,12 +73,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (stored) {
         const store: AuthStore = JSON.parse(stored);
         if (store.currentUserId) {
-          const found = store.users.find(
-            (u) => u.profile.id === store.currentUserId
-          );
-          if (found) {
-            setUser(found.profile);
-          }
+          const found = store.users.find((u) => u.profile.id === store.currentUserId);
+          if (found) setUser(found.profile);
         }
       }
     } catch {}
@@ -87,32 +95,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   }
 
-  async function register(
-    email: string,
-    password: string,
-    phone: string,
-    countryCode: string
-  ) {
+  async function register(email: string, password: string, data: RegisterData) {
     const store = await getStore();
-    const exists = store.users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase()
-    );
+    const exists = store.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
     if (exists) {
-      return { success: false, error: "An account with this email already exists" };
+      return { success: false, error: "An account with this email already exists." };
     }
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     const profile: UserProfile = {
       id,
-      name: "",
-      fatherName: "",
-      akka: "",
-      country: "Pakistan",
-      city: "",
-      qualification: "",
-      phone,
-      countryCode,
       email,
-      verified: false,
+      verified: true,
+      ...data,
     };
     store.users.push({ email: email.toLowerCase(), password, profile });
     store.currentUserId = id;
@@ -124,13 +118,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function login(email: string, password: string) {
     const store = await getStore();
     const found = store.users.find(
-      (u) =>
-        u.email.toLowerCase() === email.toLowerCase() &&
-        u.password === password
+      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
     );
-    if (!found) {
-      return { success: false, error: "Invalid email or password" };
-    }
+    if (!found) return { success: false, error: "Invalid email or password." };
     store.currentUserId = found.profile.id;
     await saveStore(store);
     setUser(found.profile);
@@ -155,26 +145,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function verifyCode(code: string) {
-    if (code.length === 6) {
-      await updateProfile({ verified: true });
-      return true;
-    }
-    return false;
-  }
-
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        isAuthenticated: !!user,
-        login,
-        register,
-        logout,
-        updateProfile,
-        verifyCode,
-      }}
+      value={{ user, isLoading, isAuthenticated: !!user, login, register, logout, updateProfile }}
     >
       {children}
     </AuthContext.Provider>
