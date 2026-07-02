@@ -46,47 +46,40 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (
-    email: string,
-    password: string,
-    data: RegisterData
-  ) => Promise<{ success: boolean; error?: string }>;
+  register: (email: string, password: string, data: RegisterData) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const STORAGE_KEY = "@dhat_maheshwari_auth_v2";
+// Single canonical key — migrate from any older key automatically
+const STORAGE_KEY = "@dhat_maheshwari_auth";
+const LEGACY_KEYS = ["@dhat_maheshwari_auth_v1", "@dhat_maheshwari_auth_v2"];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadAuth();
-  }, []);
+  useEffect(() => { loadAuth(); }, []);
 
-  async function loadAuth() {
-    try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const store: AuthStore = JSON.parse(stored);
-        if (store.currentUserId) {
-          const found = store.users.find((u) => u.profile.id === store.currentUserId);
-          if (found) setUser(found.profile);
-        }
-      }
-    } catch {}
-    finally {
-      setIsLoading(false);
-    }
-  }
-
+  /** Read store, migrating from any legacy key if needed */
   async function getStore(): Promise<AuthStore> {
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) return JSON.parse(stored) as AuthStore;
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw) as AuthStore;
+
+      // Try legacy keys in order and migrate
+      for (const legacyKey of LEGACY_KEYS) {
+        const legacy = await AsyncStorage.getItem(legacyKey);
+        if (legacy) {
+          const store = JSON.parse(legacy) as AuthStore;
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+          // Remove old key after migration
+          await AsyncStorage.removeItem(legacyKey).catch(() => {});
+          return store;
+        }
+      }
     } catch {}
     return { users: [], currentUserId: null };
   }
@@ -95,20 +88,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   }
 
+  async function loadAuth() {
+    try {
+      const store = await getStore();
+      if (store.currentUserId) {
+        const found = store.users.find((u) => u.profile.id === store.currentUserId);
+        if (found) setUser(found.profile);
+      }
+    } catch {}
+    finally { setIsLoading(false); }
+  }
+
   async function register(email: string, password: string, data: RegisterData) {
     const store = await getStore();
-    const exists = store.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-    if (exists) {
+    const emailLower = email.toLowerCase().trim();
+    if (store.users.find((u) => u.email === emailLower)) {
       return { success: false, error: "An account with this email already exists." };
     }
-    const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-    const profile: UserProfile = {
-      id,
-      email,
-      verified: true,
-      ...data,
-    };
-    store.users.push({ email: email.toLowerCase(), password, profile });
+    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const profile: UserProfile = { id, email: emailLower, verified: true, ...data };
+    store.users.push({ email: emailLower, password, profile });
     store.currentUserId = id;
     await saveStore(store);
     setUser(profile);
@@ -117,10 +116,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function login(email: string, password: string) {
     const store = await getStore();
+    const emailLower = email.toLowerCase().trim();
     const found = store.users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+      (u) => u.email === emailLower && u.password === password
     );
-    if (!found) return { success: false, error: "Invalid email or password." };
+    if (!found) return { success: false, error: "Incorrect email or password. Please try again." };
     store.currentUserId = found.profile.id;
     await saveStore(store);
     setUser(found.profile);
@@ -146,9 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider
-      value={{ user, isLoading, isAuthenticated: !!user, login, register, logout, updateProfile }}
-    >
+    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, login, register, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
