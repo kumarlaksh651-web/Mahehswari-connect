@@ -3,6 +3,7 @@ import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
+  Alert,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -13,13 +14,12 @@ import {
 } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { CallSheet } from "@/components/CallSheet";
-import { Header } from "@/components/Header";
 import { MemberCard } from "@/components/MemberCard";
 import { Member, useMembers } from "@/context/MembersContext";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 
-type FilterType = "all" | "akka" | "city";
+type FilterType = "all" | "city";
 
 interface CommunityEvent {
   id: string;
@@ -86,63 +86,82 @@ const EVENTS: CommunityEvent[] = [
     date: "5 Sep 2026",
     city: "Umerkot, Sindh",
     venue: "Umerkot Hindu Panchayat Hall, near Main Chowk",
-    conductors: "PGMF Medical Wing, Dr. Dilip Kumar Ladha (Houston, USA) — Remote Support",
+    conductors: "PGMF Medical Wing, Dr. Dilip Kumar Ladha (Houston, USA)",
     type: "medical",
   },
 ];
 
-const EVENT_COLORS: Record<CommunityEvent["type"], { bg: string; text: string; icon: React.ComponentProps<typeof Feather>["name"] }> = {
-  medical: { bg: "#FEE2E2", text: "#DC2626", icon: "heart" },
-  scholarship: { bg: "#FEF9C3", text: "#CA8A04", icon: "book" },
-  meeting: { bg: "#E0E7FF", text: "#4338CA", icon: "users" },
-  cultural: { bg: "#FCE7F3", text: "#BE185D", icon: "star" },
+const EVENT_META: Record<CommunityEvent["type"], { bg: string; text: string; icon: React.ComponentProps<typeof Feather>["name"] }> = {
+  medical:    { bg: "#FEE2E2", text: "#DC2626", icon: "heart" },
+  scholarship:{ bg: "#FEF9C3", text: "#CA8A04", icon: "book" },
+  meeting:    { bg: "#E0E7FF", text: "#4338CA", icon: "users" },
+  cultural:   { bg: "#FCE7F3", text: "#BE185D", icon: "star" },
 };
+
+// Decorative diamond pattern row
+function DiamondRow({ colors }: { colors: any }) {
+  const diamonds = ["◆", "◇", "◆", "◇", "◆", "◇", "◆"];
+  return (
+    <View style={dStyles.diamondRow}>
+      {diamonds.map((d, i) => (
+        <Text key={i} style={[dStyles.diamond, { color: i % 2 === 0 ? colors.accent : colors.border, opacity: i % 2 === 0 ? 0.7 : 0.4 }]}>{d}</Text>
+      ))}
+    </View>
+  );
+}
+
+const dStyles = StyleSheet.create({
+  diamondRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 2 },
+  diamond: { fontSize: 10 },
+});
 
 export default function HomeScreen() {
   const [query, setQuery] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
-  const [selectedAkka, setSelectedAkka] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [callMember, setCallMember] = useState<Member | null>(null);
   const [callVisible, setCallVisible] = useState(false);
+  const [thought, setThought] = useState("");
 
-  const { members, getAkkas } = useMembers();
+  const { members } = useMembers();
   const { user } = useAuth();
   const colors = useColors();
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
 
-  const akkas = getAkkas();
   const cities = [...new Set(members.map((m) => m.city))].sort();
 
-  const isSearching = query.trim().length > 0 || selectedAkka !== null || selectedCity !== null;
+  const isSearching = query.trim().length > 0 || selectedCity !== null;
 
   const filtered = isSearching
     ? members.filter((m) => {
         const q = query.toLowerCase();
-        const matchQuery = !q || m.name.toLowerCase().includes(q) || m.akka.toLowerCase().includes(q) || m.city.toLowerCase().includes(q) || m.country.toLowerCase().includes(q);
-        const matchAkka = !selectedAkka || m.akka === selectedAkka;
+        const matchQuery = !q || m.name.toLowerCase().includes(q) || m.city.toLowerCase().includes(q) || m.country.toLowerCase().includes(q);
         const matchCity = !selectedCity || m.city === selectedCity;
-        return matchQuery && matchAkka && matchCity;
+        return matchQuery && matchCity;
       })
     : [];
 
-  function handleCall(member: Member) {
-    setCallMember(member);
-    setCallVisible(true);
+  function handleCall(member: Member) { setCallMember(member); setCallVisible(true); }
+
+  function clearFilters() { setQuery(""); setSelectedCity(null); setFilterType("all"); }
+
+  function submitThought() {
+    const t = thought.trim();
+    if (!t) return;
+    setThought("");
+    Alert.alert("Shared!", "Your thought has been shared with the community.", [{ text: "OK" }]);
   }
 
-  function clearFilters() {
-    setQuery("");
-    setSelectedAkka(null);
-    setSelectedCity(null);
-    setFilterType("all");
-  }
+  const initials = user?.name
+    ? user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+    : "M";
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {/* Maroon header with search */}
-      <LinearGradient colors={[colors.primary, "#6B1010"]} style={styles.headerGradient}>
+      {/* ── Gradient Header ── */}
+      <LinearGradient colors={[colors.primary, "#5A0808"]} style={styles.headerGradient}>
+        {/* Top row */}
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.menuBtn} onPress={() => router.push("/settings")} activeOpacity={0.8}>
             <Feather name="menu" size={24} color="#fff" />
@@ -152,10 +171,26 @@ export default function HomeScreen() {
             <Text style={styles.headerSub}>Pakistan & Worldwide</Text>
           </View>
           <TouchableOpacity style={[styles.avatarBtn, { backgroundColor: colors.accent }]} onPress={() => router.push("/settings")} activeOpacity={0.8}>
-            <Text style={[styles.avatarText, { color: colors.primary }]}>
-              {user?.name ? user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() : "M"}
-            </Text>
+            <Text style={[styles.avatarText, { color: colors.primary }]}>{initials}</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Quick stats */}
+        <View style={styles.statsRow}>
+          <View style={[styles.statCard, { backgroundColor: "rgba(255,255,255,0.12)" }]}>
+            <Text style={styles.statNum}>{EVENTS.length}</Text>
+            <Text style={styles.statLabel}>Upcoming{"\n"}Programs</Text>
+          </View>
+          <View style={[styles.statDivider, { backgroundColor: "rgba(255,255,255,0.2)" }]} />
+          <View style={[styles.statCard, { backgroundColor: "rgba(255,255,255,0.12)" }]}>
+            <Text style={styles.statNum}>5</Text>
+            <Text style={styles.statLabel}>Active Welfare{"\n"}Programs</Text>
+          </View>
+          <View style={[styles.statDivider, { backgroundColor: "rgba(255,255,255,0.2)" }]} />
+          <View style={[styles.statCard, { backgroundColor: "rgba(255,255,255,0.12)" }]}>
+            <Text style={styles.statNum}>2</Text>
+            <Text style={styles.statLabel}>Community{"\n"}Organizations</Text>
+          </View>
         </View>
 
         {/* Search bar */}
@@ -164,7 +199,7 @@ export default function HomeScreen() {
             <Feather name="search" size={16} color="rgba(255,255,255,0.7)" />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search members by name, city, akka..."
+              placeholder="Search members by name, city..."
               placeholderTextColor="rgba(255,255,255,0.55)"
               value={query}
               onChangeText={setQuery}
@@ -181,31 +216,16 @@ export default function HomeScreen() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChips}>
           <TouchableOpacity
             style={[styles.filterChip, filterType === "all" && { backgroundColor: colors.accent }]}
-            onPress={() => { setFilterType("all"); setSelectedAkka(null); setSelectedCity(null); }}
+            onPress={() => { setFilterType("all"); setSelectedCity(null); }}
           >
-            <Text style={[styles.filterChipText, { color: filterType === "all" ? colors.primary : "rgba(255,255,255,0.8)" }]}>All</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterChip, filterType === "akka" && { backgroundColor: colors.accent }]}
-            onPress={() => { setFilterType(filterType === "akka" ? "all" : "akka"); setSelectedCity(null); }}
-          >
-            <Text style={[styles.filterChipText, { color: filterType === "akka" ? colors.primary : "rgba(255,255,255,0.8)" }]}>By Surname</Text>
+            <Text style={[styles.filterChipText, { color: filterType === "all" ? colors.primary : "rgba(255,255,255,0.8)" }]}>All Members</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.filterChip, filterType === "city" && { backgroundColor: colors.accent }]}
-            onPress={() => { setFilterType(filterType === "city" ? "all" : "city"); setSelectedAkka(null); }}
+            onPress={() => { setFilterType(filterType === "city" ? "all" : "city"); }}
           >
-            <Text style={[styles.filterChipText, { color: filterType === "city" ? colors.primary : "rgba(255,255,255,0.8)" }]}>By City</Text>
+            <Text style={[styles.filterChipText, { color: filterType === "city" ? colors.primary : "rgba(255,255,255,0.8)" }]}>Filter by City</Text>
           </TouchableOpacity>
-          {filterType === "akka" && akkas.map((a) => (
-            <TouchableOpacity
-              key={a}
-              style={[styles.filterChip, selectedAkka === a && { backgroundColor: "#fff" }]}
-              onPress={() => setSelectedAkka(selectedAkka === a ? null : a)}
-            >
-              <Text style={[styles.filterChipText, { color: selectedAkka === a ? colors.primary : "rgba(255,255,255,0.9)" }]}>{a}</Text>
-            </TouchableOpacity>
-          ))}
           {filterType === "city" && cities.map((c) => (
             <TouchableOpacity
               key={c}
@@ -218,7 +238,7 @@ export default function HomeScreen() {
         </ScrollView>
       </LinearGradient>
 
-      {/* Body */}
+      {/* ── Body ── */}
       {isSearching ? (
         <FlatList
           data={filtered}
@@ -238,7 +258,7 @@ export default function HomeScreen() {
             <View style={styles.empty}>
               <Feather name="search" size={40} color={colors.mutedForeground} />
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No members found</Text>
-              <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>Try different filters or search terms</Text>
+              <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>Try different search terms</Text>
             </View>
           }
           contentContainerStyle={{ paddingBottom: tabBarHeight + 16 }}
@@ -246,49 +266,111 @@ export default function HomeScreen() {
         />
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 16 }} showsVerticalScrollIndicator={false}>
-          {/* Community Events */}
+
+          {/* ── Upcoming Programs ── */}
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Upcoming Programs</Text>
-            <View style={[styles.liveDot, { backgroundColor: "#22C55E" }]} />
-            <Text style={[styles.liveLabel, { color: "#22C55E" }]}>Live</Text>
+            <View style={styles.livePill}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>LIVE</Text>
+            </View>
           </View>
 
           {EVENTS.map((ev) => {
-            const c = EVENT_COLORS[ev.type];
+            const meta = EVENT_META[ev.type];
+            const [day, mon, yr] = ev.date.split(" ");
             return (
               <View key={ev.id} style={[styles.eventCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.eventTop}>
-                  <View style={[styles.eventIcon, { backgroundColor: c.bg }]}>
-                    <Feather name={c.icon} size={20} color={c.text} />
+                  {/* Date badge */}
+                  <View style={[styles.dateBadge, { backgroundColor: colors.primary }]}>
+                    <Text style={[styles.dateBadgeDay, { color: colors.accent }]}>{day}</Text>
+                    <Text style={[styles.dateBadgeMon, { color: colors.primaryForeground }]}>{mon}</Text>
+                    <Text style={[styles.dateBadgeYr, { color: "rgba(255,255,255,0.6)" }]}>{yr}</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.eventTitle, { color: colors.foreground }]}>{ev.title}</Text>
-                    <View style={[styles.orgTag, { backgroundColor: colors.muted }]}>
-                      <Text style={[styles.orgTagText, { color: colors.primary }]}>{ev.orgShort}</Text>
+                  {/* Content */}
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <View style={styles.eventTitleRow}>
+                      <View style={[styles.typeIcon, { backgroundColor: meta.bg }]}>
+                        <Feather name={meta.icon} size={13} color={meta.text} />
+                      </View>
+                      <Text style={[styles.eventTitle, { color: colors.foreground }]} numberOfLines={2}>{ev.title}</Text>
+                    </View>
+                    <View style={[styles.orgBadge, { backgroundColor: colors.muted }]}>
+                      <Text style={[styles.orgBadgeText, { color: colors.primary }]}>{ev.orgShort}</Text>
                     </View>
                   </View>
-                  <View style={[styles.dateBadge, { backgroundColor: colors.primary }]}>
-                    <Text style={[styles.dateBadgeText, { color: colors.primaryForeground }]}>{ev.date.split(" ")[0]}</Text>
-                    <Text style={[styles.dateBadgeMon, { color: colors.accent }]}>{ev.date.split(" ")[1]}</Text>
-                  </View>
                 </View>
-                <View style={styles.eventDetails}>
-                  <EventDetail icon="map-pin" text={ev.city} colors={colors} />
-                  <EventDetail icon="home" text={ev.venue} colors={colors} />
+                {/* Details */}
+                <View style={[styles.eventDetails, { borderTopColor: colors.border }]}>
+                  <EventDetail icon="map-pin" text={ev.venue} colors={colors} />
                   <EventDetail icon="users" text={ev.conductors} colors={colors} />
                 </View>
               </View>
             );
           })}
 
-          {/* Browse Members hint */}
-          <View style={[styles.browseMembersCard, { backgroundColor: colors.primary }]}>
-            <View>
-              <Text style={styles.browseMembersTitle}>Browse Members</Text>
-              <Text style={styles.browseMembersSub}>Use the search bar or surname filter above to find community members</Text>
-            </View>
-            <Feather name="search" size={28} color="rgba(255,255,255,0.4)" />
+          {/* ── Decorative divider ── */}
+          <View style={styles.decorDivider}>
+            <View style={[styles.decorLine, { backgroundColor: colors.border }]} />
+            <DiamondRow colors={colors} />
+            <View style={[styles.decorLine, { backgroundColor: colors.border }]} />
           </View>
+
+          {/* ── Share Your Thought ── */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Share Your Thought</Text>
+          </View>
+
+          <View style={[styles.thoughtCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {/* Decorative top strip */}
+            <LinearGradient colors={[colors.primary, "#6B1010"]} style={styles.thoughtStrip}>
+              <Feather name="message-circle" size={16} color="rgba(255,255,255,0.7)" />
+              <Text style={styles.thoughtStripText}>Say something to the community</Text>
+            </LinearGradient>
+
+            <View style={styles.thoughtBody}>
+              <View style={[styles.thoughtAvatar, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.thoughtAvatarText, { color: colors.primaryForeground }]}>{initials}</Text>
+              </View>
+              <View style={{ flex: 1, gap: 10 }}>
+                <TextInput
+                  style={[styles.thoughtInput, { backgroundColor: colors.secondary, color: colors.foreground, borderColor: colors.border }]}
+                  placeholder={`Share a thought, Jai Mahesh! 🙏`}
+                  placeholderTextColor={colors.mutedForeground}
+                  value={thought}
+                  onChangeText={setThought}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+                <TouchableOpacity
+                  style={[styles.thoughtSendBtn, { backgroundColor: colors.primary, opacity: thought.trim() ? 1 : 0.5 }]}
+                  onPress={submitThought}
+                  activeOpacity={0.85}
+                >
+                  <Feather name="send" size={15} color={colors.primaryForeground} />
+                  <Text style={[styles.thoughtSendText, { color: colors.primaryForeground }]}>Share with Community</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {/* ── Community banner ── */}
+          <LinearGradient colors={[colors.primary, "#3D0000"]} style={[styles.communityBanner, { marginTop: 16 }]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <View style={styles.bannerContent}>
+              <Text style={styles.bannerTitle}>دھت مہیشوری</Text>
+              <Text style={styles.bannerSub}>Connecting Pakistan's Dhatki Maheshwari families worldwide</Text>
+            </View>
+            <View style={styles.bannerOrbs}>
+              <View style={[styles.orb, styles.orb1]} />
+              <View style={[styles.orb, styles.orb2]} />
+            </View>
+            <View style={styles.bannerIcons}>
+              <Feather name="globe" size={28} color="rgba(255,255,255,0.15)" />
+            </View>
+          </LinearGradient>
+
         </ScrollView>
       )}
 
@@ -300,7 +382,7 @@ export default function HomeScreen() {
 function EventDetail({ icon, text, colors }: { icon: any; text: string; colors: any }) {
   return (
     <View style={styles.eventDetailRow}>
-      <Feather name={icon} size={13} color={colors.mutedForeground} style={{ marginTop: 1 }} />
+      <Feather name={icon} size={12} color={colors.mutedForeground} style={{ marginTop: 2 }} />
       <Text style={[styles.eventDetailText, { color: colors.mutedForeground }]}>{text}</Text>
     </View>
   );
@@ -308,41 +390,105 @@ function EventDetail({ icon, text, colors }: { icon: any; text: string; colors: 
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  headerGradient: { paddingBottom: 12 },
-  headerRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 54, paddingBottom: 10, gap: 12 },
+
+  // Header
+  headerGradient: { paddingBottom: 14 },
+  headerRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 54, paddingBottom: 14, gap: 12 },
   menuBtn: { width: 38, height: 38, justifyContent: "center", alignItems: "center" },
   headerTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#fff" },
-  headerSub: { fontSize: 11, color: "rgba(255,255,255,0.65)", fontFamily: "Inter_400Regular" },
+  headerSub: { fontSize: 11, color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular" },
   avatarBtn: { width: 38, height: 38, borderRadius: 19, justifyContent: "center", alignItems: "center" },
   avatarText: { fontSize: 14, fontFamily: "Inter_700Bold" },
+
+  // Stats
+  statsRow: { flexDirection: "row", marginHorizontal: 16, marginBottom: 14, borderRadius: 16, overflow: "hidden" },
+  statCard: { flex: 1, paddingVertical: 12, paddingHorizontal: 8, alignItems: "center", gap: 2 },
+  statDivider: { width: 1 },
+  statNum: { fontSize: 22, fontFamily: "Inter_700Bold", color: "#C9A844" },
+  statLabel: { fontSize: 10, color: "rgba(255,255,255,0.75)", fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 14 },
+
+  // Search
   searchWrap: { paddingHorizontal: 16, marginBottom: 10 },
   searchBar: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11, gap: 10 },
   searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: "#fff" },
+
+  // Filter chips
   filterChips: { paddingHorizontal: 16, gap: 8, paddingBottom: 4 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.15)" },
   filterChipText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+
+  // Search results
   resultsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
   resultsTitle: { fontSize: 16, fontFamily: "Inter_700Bold" },
   clearText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  sectionHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12, gap: 8 },
+
+  // Section
+  sectionHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12, gap: 10 },
   sectionTitle: { fontSize: 19, fontFamily: "Inter_700Bold", flex: 1 },
-  liveDot: { width: 8, height: 8, borderRadius: 4 },
-  liveLabel: { fontSize: 12, fontFamily: "Inter_700Bold" },
-  eventCard: { marginHorizontal: 16, marginBottom: 12, padding: 14, borderRadius: 18, borderWidth: 1, gap: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
-  eventTop: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  eventIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: "center", alignItems: "center" },
-  eventTitle: { fontSize: 15, fontFamily: "Inter_700Bold", marginBottom: 4, flex: 1 },
-  orgTag: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  orgTagText: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.4 },
-  dateBadge: { alignItems: "center", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, minWidth: 46 },
-  dateBadgeText: { fontSize: 18, fontFamily: "Inter_700Bold", lineHeight: 22 },
-  dateBadgeMon: { fontSize: 10, fontFamily: "Inter_700Bold", textTransform: "uppercase" },
-  eventDetails: { gap: 6, borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.06)", paddingTop: 10 },
-  eventDetailRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  eventDetailText: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 18 },
-  browseMembersCard: { marginHorizontal: 16, marginTop: 6, marginBottom: 4, padding: 20, borderRadius: 18, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  browseMembersTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff", marginBottom: 4 },
-  browseMembersSub: { fontSize: 12, color: "rgba(255,255,255,0.7)", fontFamily: "Inter_400Regular", maxWidth: 240, lineHeight: 18 },
+  livePill: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#DCFCE7", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#22C55E" },
+  liveText: { fontSize: 10, fontFamily: "Inter_700Bold", color: "#16A34A", letterSpacing: 0.5 },
+
+  // Event cards
+  eventCard: {
+    marginHorizontal: 16, marginBottom: 12, borderRadius: 18, borderWidth: 1,
+    overflow: "hidden",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8, elevation: 3,
+  },
+  eventTop: { flexDirection: "row", gap: 12, padding: 14, alignItems: "flex-start" },
+  dateBadge: { width: 50, paddingVertical: 8, borderRadius: 12, alignItems: "center", gap: 1 },
+  dateBadgeDay: { fontSize: 20, fontFamily: "Inter_700Bold", lineHeight: 24 },
+  dateBadgeMon: { fontSize: 10, fontFamily: "Inter_700Bold", textTransform: "uppercase", letterSpacing: 0.5 },
+  dateBadgeYr: { fontSize: 9, fontFamily: "Inter_400Regular" },
+  eventTitleRow: { flexDirection: "row", alignItems: "flex-start", gap: 7 },
+  typeIcon: { width: 24, height: 24, borderRadius: 8, justifyContent: "center", alignItems: "center", marginTop: 1, flexShrink: 0 },
+  eventTitle: { fontSize: 14, fontFamily: "Inter_700Bold", flex: 1, lineHeight: 20 },
+  orgBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  orgBadgeText: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
+  eventDetails: { borderTopWidth: 1, paddingHorizontal: 14, paddingVertical: 10, gap: 6 },
+  eventDetailRow: { flexDirection: "row", alignItems: "flex-start", gap: 7 },
+  eventDetailText: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 17 },
+
+  // Decorative divider
+  decorDivider: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, gap: 10, marginVertical: 4 },
+  decorLine: { flex: 1, height: 1 },
+
+  // Thought box
+  thoughtCard: {
+    marginHorizontal: 16, borderRadius: 18, borderWidth: 1, overflow: "hidden",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+  },
+  thoughtStrip: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
+  thoughtStripText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.85)" },
+  thoughtBody: { flexDirection: "row", gap: 12, padding: 14, alignItems: "flex-start" },
+  thoughtAvatar: { width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center", marginTop: 2 },
+  thoughtAvatarText: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  thoughtInput: {
+    borderWidth: 1, borderRadius: 12, padding: 12, fontSize: 14,
+    fontFamily: "Inter_400Regular", minHeight: 80, textAlignVertical: "top",
+  },
+  thoughtSendBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 7, paddingVertical: 12, borderRadius: 12,
+  },
+  thoughtSendText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+
+  // Community banner
+  communityBanner: {
+    marginHorizontal: 16, marginBottom: 4, borderRadius: 18, padding: 20,
+    overflow: "hidden", position: "relative",
+    flexDirection: "row", alignItems: "center", gap: 12,
+  },
+  bannerContent: { flex: 1, gap: 6 },
+  bannerTitle: { fontSize: 22, fontFamily: "Inter_700Bold", color: "#C9A844" },
+  bannerSub: { fontSize: 12, color: "rgba(255,255,255,0.75)", fontFamily: "Inter_400Regular", lineHeight: 18 },
+  bannerOrbs: { position: "absolute", top: -20, right: -20 },
+  orb: { position: "absolute", borderRadius: 999, backgroundColor: "rgba(255,255,255,0.06)" },
+  orb1: { width: 90, height: 90, top: 0, right: 0 },
+  orb2: { width: 60, height: 60, top: 20, right: 20 },
+  bannerIcons: { position: "absolute", bottom: 12, right: 16 },
+
+  // Empty state
   empty: { alignItems: "center", paddingTop: 60, gap: 12 },
   emptyTitle: { fontSize: 18, fontFamily: "Inter_600SemiBold" },
   emptyDesc: { fontSize: 14, fontFamily: "Inter_400Regular" },

@@ -22,49 +22,31 @@ export function MemberCard({ member, onCall }: MemberCardProps) {
 
   return (
     <TouchableOpacity
-      style={[
-        styles.card,
-        { backgroundColor: colors.card, borderColor: colors.border },
-      ]}
+      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
       onPress={() => router.push(`/member/${member.id}`)}
       activeOpacity={0.78}
     >
-      <View style={[styles.avatarWrap, { backgroundColor: colors.primary }]}>
-        <Text style={[styles.initials, { color: colors.primaryForeground }]}>
-          {initials}
-        </Text>
+      <View style={styles.avatarWrap}>
+        <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
+          <Text style={[styles.initials, { color: colors.primaryForeground }]}>{initials}</Text>
+        </View>
         {member.online && (
-          <View
-            style={[
-              styles.onlineDot,
-              { borderColor: colors.card },
-            ]}
-          />
+          <View style={[styles.onlineDot, { borderColor: colors.card }]} />
         )}
       </View>
 
       <View style={styles.info}>
-        <View style={styles.nameRow}>
-          <Text
-            style={[styles.name, { color: colors.foreground }]}
-            numberOfLines={1}
-          >
-            {member.name}
-          </Text>
-          <View
-            style={[styles.akkaBadge, { backgroundColor: colors.muted }]}
-          >
-            <Text style={[styles.akkaText, { color: colors.accent }]}>
-              {member.akka}
-            </Text>
-          </View>
-        </View>
+        <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
+          {member.name}
+        </Text>
         <Text style={[styles.location, { color: colors.mutedForeground }]}>
           {member.countryFlag} {member.city}, {member.country}
         </Text>
-        <Text style={[styles.qual, { color: colors.mutedForeground }]}>
-          {member.qualification}
-        </Text>
+        {member.qualification ? (
+          <Text style={[styles.qual, { color: colors.mutedForeground }]} numberOfLines={1}>
+            {member.qualification}
+          </Text>
+        ) : null}
       </View>
 
       <TouchableOpacity
@@ -93,17 +75,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  avatarWrap: {
+  avatarWrap: { position: "relative" },
+  avatarCircle: {
     width: 50,
     height: 50,
     borderRadius: 25,
     justifyContent: "center",
     alignItems: "center",
   },
-  initials: {
-    fontSize: 17,
-    fontFamily: "Inter_700Bold",
-  },
+  initials: { fontSize: 17, fontFamily: "Inter_700Bold" },
   onlineDot: {
     position: "absolute",
     bottom: 1,
@@ -114,41 +94,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#22C55E",
     borderWidth: 2,
   },
-  info: {
-    flex: 1,
-    marginLeft: 12,
-    gap: 3,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  name: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    flexShrink: 1,
-  },
-  akkaBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  akkaText: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  location: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-  },
-  qual: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-  },
+  info: { flex: 1, marginLeft: 12, gap: 3 },
+  name: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  location: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  qual: { fontSize: 12, fontFamily: "Inter_400Regular" },
   callBtn: {
     width: 38,
     height: 38,
