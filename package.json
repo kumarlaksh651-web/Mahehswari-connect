@@ -1,19 +1,14 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "index.mjs",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "index.mjs"
-    }
-  ]
+  "name": "mahehswari-connect",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @workspace/mockup-sandbox dev",
+    "build": "pnpm --filter @workspace/mockup-sandbox build",
+    "preview": "pnpm --filter @workspace/mockup-sandbox preview"
+  }
 }
